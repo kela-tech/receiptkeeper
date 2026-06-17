@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>ReceiptKeeper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- NAVBAR -->
+        <div class="navbar">
+            <h1>🧾 ReceiptKeeper</h1>
+            <div class="nav-actions">
+                <span class="nav-user">👤 {{ username }}</span>
+                <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <!-- FLASH MESSAGES -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, msg in messages %}
+        <div class="alert {{ category }}">{{ msg }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- DASHBOARD CARDS -->
+        <div class="dashboard">
+            <div class="card">
+                <h3>Total Receipts</h3>
+                <p>{{ stats.total_receipts }}</p>
+            </div>
+            <div class="card">
+                <h3>Total Spent</h3>
+                <p>₦{{ stats.total_amount }}</p>
+            </div>
+            <div class="card">
+                <h3>This Month</h3>
+                <p>₦{{ stats.month_amount }}</p>
+            </div>
+        </div>
+
+        <!-- BUDGET TRACKER -->
+        <div class="section">
+            <h2>Budget Tracker</h2>
+
+            {% if budget_data %}
+            <div class="table-wrapper">
+                <table class="budget-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Spent This Month</th>
+                            <th>Limit</th>
+                            <th>Progress</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in budget_data %}
+                        <tr>
+                            <td><strong>{{ b.category }}</strong></td>
+                            <td>₦{{ "%.2f"|format(b.spent) }}</td>
+                            <td>₦{{ "%.2f"|format(b.limit) }}</td>
+                            <td>
+                                <div class="progress-wrap">
+                                    <div class="progress-bar {{ b.status }}" style="width:{{ b.percent }}%">
+                                        {% if b.percent > 15 %}{{ b.raw_percent }}%{% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if b.status == "danger" %}
+                                <span class="badge-danger">Over Budget!</span>
+                                {% elif b.status == "warning" %}
+                                <span class="badge-warning">⚠ Near Limit</span>
+                                {% else %}
+                                <span class="badge-ok">✓ On Track</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a class="remove-btn" href="/remove-budget/{{ b.category }}"
+                                    onclick="return confirm('Remove {{ b.category }} budget?')">Remove</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="no-budget">No budgets set yet. Use the form below to add one.</p>
+            {% endif %}
+
+            <br>
+            <h3>Set / Update a Budget</h3>
+            <form action="/set-budget" method="POST">
+                <div class="budget-form-row">
+                    <select name="category" required>
+                        <option value="">Select Category</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" step="0.01" name="monthly_limit" placeholder="Monthly Limit (₦)" required>
+                    <button type="submit">Set Budget</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ADD RECEIPT -->
+        <div class="section">
+            <h2>Add Receipt</h2>
+            <form action="/add" method="POST" enctype="multipart/form-data">
+                <div class="form-row">
+                    <input type="number" step="0.01" name="amount" placeholder="Amount" required>
+                    <input type="date" name="date" required>
+                </div>
+                <input type="text" name="description" placeholder="Description" required>
+                <select name="category" required>
+                    <option value="">Select Category</option>
+                    {% for cat in categories %}
+                    <option>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+                <input type="file" name="receipt_image" accept=".jpg,.jpeg,.png">
+                <button type="submit">Add Receipt</button>
+            </form>
+        </div>
+
+        <!-- SEARCH & FILTERS -->
+        <div class="section">
+            <h2>Search & Filters</h2>
+            <form method="GET">
+                <div class="filter-row">
+                    <input type="text" name="search" placeholder="Search description" value="{{ search }}">
+                    <select name="category">
+                        <option value="">All Categories</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if category==cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-row">
+                    <input type="date" name="start_date" value="{{ start_date }}" placeholder="From">
+                    <input type="date" name="end_date" value="{{ end_date }}" placeholder="To">
+                </div>
+                <div class="filter-actions">
+                    <button type="submit">Filter</button>
+                    <a href="/"><button type="button">Clear</button></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- EXPORT & EMAIL -->
+        <div class="section">
+            <a href="/export" class="export-btn">📥 Export CSV</a>
+
+            <hr style="margin:20px 0; border:none; border-top:1px solid #e2e8f0">
+
+            <h3>📧 Monthly Report</h3>
+            <p style="color:#64748b; margin-top:0; margin-bottom:15px;">Get this month's spending summary sent to your
+                inbox.</p>
+            <form action="/send-report" method="POST">
+                <div class="budget-form-row">
+                    <input type="email" name="email" placeholder="your@email.com" required>
+                    <button type="submit" style="background:#10b981;">Send Report</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- MONTHLY CHART -->
+        <div class="section">
+            <h2>Monthly Spending</h2>
+            <canvas id="monthlyChart" style="max-height: 300px;"></canvas>
+        </div>
+
+        <!-- RECEIPTS TABLE -->
+        <div class="section">
+            <h2>All Receipts</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Image</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for receipt in receipts %}
+                        <tr>
+                            <td>{{ receipt.id }}</td>
+                            <td>
+                                {% if receipt.image_path %}
+                                <img src="{{ url_for('static', filename=receipt.image_path) }}" class="thumb">
+                                {% else %}
+                                No Image
+                                {% endif %}
+                            </td>
+                            <td>₦{{ receipt.amount }}</td>
+                            <td>{{ receipt.date }}</td>
+                            <td>{{ receipt.description }}</td>
+                            <td>{{ receipt.category }}</td>
+                            <td>
+                                <a href="/edit/{{ receipt.id }}" class="edit-link">Edit</a> |
+                                <a href="/delete/{{ receipt.id }}" class="delete-link"
+                                    onclick="return confirm('Delete receipt?')">Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Monthly bar chart
+        const labels = {{ chart_labels| tojson }};
+        const values = {{ chart_values| tojson }};
+        const ctx = document.getElementById('monthlyChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Monthly Spending (₦)',
+                        data: values,
+                        backgroundColor: '#10b981',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+
+        // Dark mode toggle
+        function toggleDark() {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+        }
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark');
+        }
+    </script>
+</body>
+
+</html>

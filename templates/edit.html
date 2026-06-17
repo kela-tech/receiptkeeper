@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Edit Receipt – ReceiptKeeper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Edit Receipt</h1>
+        <div class="section">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="number" step="0.01" name="amount" value="{{ receipt.amount }}" required>
+                <input type="date" name="date" value="{{ receipt.date }}" required>
+                <input type="text" name="description" value="{{ receipt.description }}" required>
+                <select name="category">
+                    <option value="Food" {% if receipt.category=="Food" %}selected{% endif %}>Food</option>
+                    <option value="Transport" {% if receipt.category=="Transport" %}selected{% endif %}>Transport
+                    </option>
+                    <option value="School" {% if receipt.category=="School" %}selected{% endif %}>School</option>
+                    <option value="Data" {% if receipt.category=="Data" %}selected{% endif %}>Data</option>
+                    <option value="Shopping" {% if receipt.category=="Shopping" %}selected{% endif %}>Shopping</option>
+                </select>
+                <input type="file" name="receipt_image">
+                {% if receipt.image_path %}
+                <p>Current Image:</p>
+                <img src="{{ url_for('static', filename=receipt.image_path) }}" width="150">
+                {% endif %}
+                <br><br>
+                <button type="submit">Update Receipt</button>
+                <a href="/">Back</a>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

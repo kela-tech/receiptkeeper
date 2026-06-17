@@ -1,0 +1,6 @@
+{
+  "python.terminal.useEnvFile": true,
+  "terminal.integrated.commandsToSkipShell": [
+    ""
+  ]
+}

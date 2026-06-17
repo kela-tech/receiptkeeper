@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Login – ReceiptKeeper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="auth-wrapper">
+        <div class="auth-box">
+            <h1>🧾 ReceiptKeeper</h1>
+            <h2>Sign In</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for cat, msg in messages %}
+            <div class="alert {{ cat }}">{{ msg }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+            <form method="POST">
+                <input type="text" name="username" placeholder="Username" required autofocus>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit" class="auth-btn">Login</button>
+            </form>
+            <p class="auth-link">Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+        </div>
+    </div>
+</body>
+
+</html>
